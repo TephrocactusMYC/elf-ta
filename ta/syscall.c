@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 #include <utee_syscalls.h>
+#include <tee_internal_api.h>
+#include <pta_elf_ta_loader.h>
 #include "elf_util.h"
 #include "elf_loader_api.h"
 #include "syscall_number.h"
@@ -42,7 +45,7 @@ static void *make_brk_space(size_t size) {
     return (void *) ptr;
 }
 
-static void * sys_brk(void * brk) {
+static void *sys_brk(void *brk) {
     const size_t brk_size = 2 * 0x1000;
     static void *brk_start = NULL;
     static void *curr_ptr = NULL;
@@ -100,9 +103,26 @@ static int sys_mprotect(void *addr, size_t len, int prot) {
     return 0;
 }
 
+static int sys_openat(int dirfd, const char *pathname, int flags) {
+    sys_openat_args_t args = {
+            .dirfd = dirfd,
+            .pathname = pathname,
+            .pathname_len = strlen(pathname) + 1,
+            .flags = flags,
+    };
+    long ret = 0;
+    TEE_Result res = TEE_forward_syscall(SYS_openat, &args, sizeof(args), &ret);
+    DMSG("sys_openat(%d, %s, %d) = %ld\n", dirfd, pathname, flags, ret);
+
+    if (res != TEE_SUCCESS) {
+        return -1;
+    }
+    return (int) ret;
+}
+
 long syscall_hook_impl(long n, long a, long b, long c, long d, long e, long f) {
     long ret = 0;
-    printf("syscall_hook_impl(%ld, %ld, %ld, %ld, %ld, %ld, %ld)\n", n, a, b, c, d, e, f);
+    DMSG("syscall_hook_impl(%ld, %ld, %ld, %ld, %ld, %ld, %ld)\n", n, a, b, c, d, e, f);
     switch (n) {
         case SYS_set_tid_address:
         case SYS_ioctl:
@@ -121,6 +141,9 @@ long syscall_hook_impl(long n, long a, long b, long c, long d, long e, long f) {
             break;
         case SYS_mprotect:
             ret = sys_mprotect((void *) a, (size_t) b, (int) c);
+            break;
+        case SYS_openat:
+            ret = sys_openat((int) a, (const char *) b, (int) c);
             break;
         default:
             ret = -1;
