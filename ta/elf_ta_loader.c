@@ -8,7 +8,7 @@
  * the TA.
  */
 TEE_Result TA_CreateEntryPoint(void) {
-    DMSG("has been called");
+    // DMSG("has been called");
 
     return TEE_SUCCESS;
 }
@@ -18,7 +18,7 @@ TEE_Result TA_CreateEntryPoint(void) {
  * crashed or panicked. This is the last call in the TA.
  */
 void TA_DestroyEntryPoint(void) {
-    DMSG("has been called");
+    // DMSG("has been called");
 }
 
 /*
@@ -35,7 +35,7 @@ TEE_Result TA_OpenSessionEntryPoint(uint32_t param_types,
                                                TEE_PARAM_TYPE_NONE,
                                                TEE_PARAM_TYPE_NONE);
 
-    DMSG("has been called");
+    // DMSG("has been called");
 
     if (param_types != exp_param_types)
         return TEE_ERROR_BAD_PARAMETERS;
@@ -55,7 +55,7 @@ TEE_Result TA_OpenSessionEntryPoint(uint32_t param_types,
  */
 void TA_CloseSessionEntryPoint(void __maybe_unused *sess_ctx) {
     (void) &sess_ctx; /* Unused parameter */
-    IMSG("Goodbye!\n");
+    // IMSG("Goodbye!\n");
 }
 
 static char **rebuild_args(char *args_buf) {
@@ -91,7 +91,7 @@ static TEE_Result handle_load(uint32_t param_types, TEE_Param params[4]) {
                                                TEE_PARAM_TYPE_MEMREF_INPUT,
                                                TEE_PARAM_TYPE_MEMREF_INPUT);
 
-    DMSG("has been called");
+    // DMSG("has been called");
 
     if (param_types != exp_param_types) {
         return TEE_ERROR_BAD_PARAMETERS;

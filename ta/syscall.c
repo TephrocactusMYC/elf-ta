@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <utee_syscalls.h>
 #include <tee_internal_api.h>
 #include <pta_elf_ta_loader.h>
@@ -112,7 +114,103 @@ static int sys_openat(int dirfd, const char *pathname, int flags) {
     };
     long ret = 0;
     TEE_Result res = TEE_forward_syscall(SYS_openat, &args, sizeof(args), &ret);
-    DMSG("sys_openat(%d, %s, %d) = %ld\n", dirfd, pathname, flags, ret);
+//    DMSG("sys_openat(%d, %s, %d) = %ld\n", dirfd, pathname, flags, ret);
+
+    if (res != TEE_SUCCESS) {
+        return -1;
+    }
+    return (int) ret;
+}
+
+static int sys_close(int fd) {
+    sys_close_args_t args = {
+            .fd = fd,
+    };
+    long ret = 0;
+    TEE_Result res = TEE_forward_syscall(SYS_close, &args, sizeof(args), &ret);
+    DMSG("sys_close(%d) = %ld\n", fd, ret);
+
+    if (res != TEE_SUCCESS) {
+        return -1;
+    }
+    return (int) ret;
+}
+
+static ssize_t sys_read(int fd, void *buf, size_t count){
+    sys_read_args_t args = {
+            .fd = fd,
+            .buf=buf,
+            .count=count,
+    };
+    long ret = 0;
+    TEE_Result res = TEE_forward_syscall(SYS_read, &args, sizeof(args), &ret);
+//    DMSG("sys_read(%d) = %ld\n", fd, ret);
+
+    if (res != TEE_SUCCESS) {
+        return -1;
+    }
+    return (ssize_t) ret;
+}
+
+static ssize_t sys_write(int fd, void *buf, size_t count){
+    sys_write_args_t args = {
+            .fd = fd,
+            .buf=buf,
+            .count=count,
+    };
+    long ret = 0;
+    TEE_Result res = TEE_forward_syscall(SYS_write, &args, sizeof(args), &ret);
+//    DMSG("sys_write(%d) = %ld\n", fd, ret);
+
+    if (res != TEE_SUCCESS) {
+        return -1;
+    }
+    return (ssize_t) ret;
+}
+
+static ssize_t sys_pread(int fd, void *buf, size_t count,long ofs){
+    sys_pread_args_t args = {
+            .fd = fd,
+            .buf=buf,
+            .count=count,
+            .ofs=ofs,
+    };
+    long ret = 0;
+    TEE_Result res = TEE_forward_syscall(SYS_pread64, &args, sizeof(args), &ret);
+//    DMSG("sys_pread(%d) = %ld\n", fd, ret);
+
+    if (res != TEE_SUCCESS) {
+        return -1;
+    }
+    return (ssize_t) ret;
+}
+
+static ssize_t sys_pwrite(int fd, void *buf, size_t count,long ofs){
+    sys_pwrite_args_t args = {
+            .fd = fd,
+            .buf=buf,
+            .count=count,
+            .ofs=ofs,
+    };
+    long ret = 0;
+    TEE_Result res = TEE_forward_syscall(SYS_pwrite64, &args, sizeof(args), &ret);
+//    DMSG("sys_pwrite(%d) = %ld\n", fd, ret);
+
+    if (res != TEE_SUCCESS) {
+        return -1;
+    }
+    return (ssize_t) ret;
+}
+
+static int sys_access(const char *filename, int amode) {
+    sys_access_args_t args = {
+            .filename = filename,
+            .amode = amode,
+            .pathname_len = strlen(filename) + 1,
+    };
+    long ret = 0;
+    TEE_Result res = TEE_forward_syscall(SYS_faccessat, &args, sizeof(args), &ret);
+    DMSG("access(%d, %s, %d) = %ld\n", amode, filename, ret);
 
     if (res != TEE_SUCCESS) {
         return -1;
@@ -145,6 +243,23 @@ long syscall_hook_impl(long n, long a, long b, long c, long d, long e, long f) {
         case SYS_openat:
             ret = sys_openat((int) a, (const char *) b, (int) c);
             break;
+        case SYS_close:
+            ret = sys_close((int) a);
+            break;
+        case SYS_read:
+            ret = sys_read((int) a,(void *)b,(size_t) c);
+            break;
+        case SYS_write:
+            ret = sys_write((int) a,(void *)b,(size_t) c);
+            break;
+        case SYS_pread64:
+            ret = sys_pread((int) a,(void *)b,(size_t) c,(long) d);
+            break;
+        case SYS_pwrite64:
+            ret = sys_pwrite((int) a,(void *)b,(size_t) c,(long) d);
+            break;
+        case SYS_faccessat:
+            ret = sys_access( (const char *) a, (int) b);
         default:
             ret = -1;
             break;

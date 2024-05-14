@@ -140,7 +140,8 @@ int main(int argc, char *argv[], char *envp[]) {
         printf("TA invocation failed with code 0x%x origin 0x%x\n", res, err_origin);
         return 1;
     }
-    printf("TA invocation succeeded, TA returned code 0x%x\n", err_origin);
+    // printf("TA invocation succeeded, TA returned code 0x%x\n", err_origin);
+    printf("TA invocation succeede.\n");
 
     free(envp_buf);
     free(argv_buf);
