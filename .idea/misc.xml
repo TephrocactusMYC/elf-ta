@@ -5,7 +5,11 @@
     <option name="openedFilesInfos">
       <list>
         <OpenedFileInfo>
-          <option name="caretOffset" value="120" />
+          <option name="caretOffset" value="4346" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/ta/elf_ta_loader.c" />
+        </OpenedFileInfo>
+        <OpenedFileInfo>
+          <option name="caretOffset" value="7964" />
           <option name="fileUrl" value="file://$PROJECT_DIR$/ta/syscall.c" />
         </OpenedFileInfo>
       </list>

@@ -96,6 +96,18 @@ static void *sys_mmap(void *addr, size_t len, int prot, int flags, int fd, long 
     return (void *) vaddr;
 }
 
+static int  sys_munmap(void *start, size_t len) {
+    vaddr_t vaddr = (vaddr_t) start;
+    TEE_Result res;
+    res = _utee_ldelf_unmap(vaddr, len);
+    if (res != TEE_SUCCESS) {
+        DMSG("sys_munmap(%p, %d) = %ld\n", vaddr, len, res);
+        return -1;
+    }
+
+    return TEE_SUCCESS;
+}
+
 static int sys_mprotect(void *addr, size_t len, int prot) {
     unsigned long tee_prot = translate_prot(prot);
     TEE_Result res = _utee_ldelf_set_prot((vaddr_t) addr, len, tee_prot);
@@ -210,7 +222,23 @@ static int sys_access(const char *filename, int amode) {
     };
     long ret = 0;
     TEE_Result res = TEE_forward_syscall(SYS_faccessat, &args, sizeof(args), &ret);
-    DMSG("access(%d, %s, %d) = %ld\n", amode, filename, ret);
+//    DMSG("access(%d, %s, %d) = %ld\n", amode, filename, ret);
+
+    if (res != TEE_SUCCESS) {
+        return -1;
+    }
+    return (int) ret;
+}
+
+static int sys_lseek(int fd, long offset, int whence) {
+    sys_lseek_args_t args = {
+            .fd=fd,
+            .offset=offset,
+            .whence=whence,
+    };
+    long ret = 0;
+    TEE_Result res = TEE_forward_syscall(SYS_lseek, &args, sizeof(args), &ret);
+    DMSG("lseek(%d, %ld, %d, %d) = %ld\n", fd, offset,whence, ret);
 
     if (res != TEE_SUCCESS) {
         return -1;
@@ -237,6 +265,9 @@ long syscall_hook_impl(long n, long a, long b, long c, long d, long e, long f) {
         case SYS_mmap:
             ret = (long) sys_mmap((void *) a, (size_t) b, (int) c, (int) d, (int) e, (long) f);
             break;
+        case SYS_munmap:
+            ret = (long) sys_munmap((void *) a, (size_t) b);
+            break;
         case SYS_mprotect:
             ret = sys_mprotect((void *) a, (size_t) b, (int) c);
             break;
@@ -260,6 +291,10 @@ long syscall_hook_impl(long n, long a, long b, long c, long d, long e, long f) {
             break;
         case SYS_faccessat:
             ret = sys_access( (const char *) a, (int) b);
+            break;
+        case SYS_lseek:
+            ret = sys_lseek( (int) a, (long) b, (int) c);
+            break;
         default:
             ret = -1;
             break;
