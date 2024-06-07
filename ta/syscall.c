@@ -12,11 +12,6 @@
 #include "syscall_number.h"
 #include "syscall.h"
 
-struct iovec {
-    void *iov_base;
-    size_t iov_len;
-};
-
 static ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt) {
     // only support stdout & stderr now
     if (fd != 1 && fd != 2) {
@@ -164,6 +159,22 @@ static ssize_t sys_read(int fd, void *buf, size_t count){
     return (ssize_t) ret;
 }
 
+static ssize_t sys_readv(int fd, const struct iovec *iov, int count){
+    sys_readv_args_t args = {
+            .fd = fd,
+            .iov=iov,
+            .count=count,
+    };
+    long ret = 0;
+    TEE_Result res = TEE_forward_syscall(SYS_readv, &args, sizeof(args), &ret);
+    DMSG("sys_readv(%d) = %ld\n", fd, ret);
+
+    if (res != TEE_SUCCESS) {
+        return -1;
+    }
+    return (ssize_t) ret;
+}
+
 static ssize_t sys_write(int fd, void *buf, size_t count){
     sys_write_args_t args = {
             .fd = fd,
@@ -294,6 +305,9 @@ long syscall_hook_impl(long n, long a, long b, long c, long d, long e, long f) {
             break;
         case SYS_lseek:
             ret = sys_lseek( (int) a, (long) b, (int) c);
+            break;
+        case SYS_readv:
+            ret = sys_readv( (int) a,(void *)b,(size_t) c);
             break;
         default:
             ret = -1;

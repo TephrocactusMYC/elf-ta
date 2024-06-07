@@ -98,7 +98,7 @@ int main(int argc, char *argv[], char *envp[]) {
         return 1;
     }
 
-    if (argc != 2 || strcmp(argv[1], "--help") == 0) {
+    if (argc < 2 || strcmp(argv[1], "--help") == 0) {
         printf("Usage: %s <file_name>\n", argv[0]);
         return 1;
     }
