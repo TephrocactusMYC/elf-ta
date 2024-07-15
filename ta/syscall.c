@@ -73,22 +73,65 @@ static unsigned long translate_prot(int flags) {
 }
 
 static void *sys_mmap(void *addr, size_t len, int prot, int flags, int fd, long offset) {
-    vaddr_t vaddr = (vaddr_t) addr;
-    TEE_Result res;
-    res = _utee_ldelf_map_zi(&vaddr, len, 0, 0, 0);
-    if (res != TEE_SUCCESS) {
-        return (void *) -1;
-    }
-    unsigned long tee_prot = translate_prot(prot);
-    if (tee_prot == LDELF_MAP_FLAG_WRITEABLE) {
+    DMSG("fd=%d,len=%d\n",fd,len);
+    if(fd<=0) {
+        vaddr_t vaddr = (vaddr_t) addr;
+        TEE_Result res;
+        res = _utee_ldelf_map_zi(&vaddr, len, 0, 0, 0);
+        if (res != TEE_SUCCESS) {
+            DMSG("res=%d\n", res);
+            return (void *) -1;
+        }
+        unsigned long tee_prot = translate_prot(prot);
+        if (tee_prot == LDELF_MAP_FLAG_WRITEABLE) {
+            return (void *) vaddr;
+        }
+
+        res = _utee_ldelf_set_prot(vaddr, len, tee_prot);
+        if (res != TEE_SUCCESS) {
+            return (void *) -1;
+        }
         return (void *) vaddr;
     }
+    else{
+        // handle map file into vmem
+        // get size of file
+        // size_t len
+        // read file
+        DMSG("buf size %zu 字节\n", len);
+        void *buf= TEE_Malloc(len,0);
+        EMSG("Here!");
+        size_t CHUNK_SIZE=1024*1024;
+        size_t total_bytes_read = 0;
+        while (total_bytes_read < len) {
+            size_t bytes_to_read = CHUNK_SIZE;
+            DMSG("len - total_bytes_read %zu 字节\n", len - total_bytes_read);
+            if (len - total_bytes_read < CHUNK_SIZE) {
+                bytes_to_read = len - total_bytes_read;
 
-    res = _utee_ldelf_set_prot(vaddr, len, tee_prot);
-    if (res != TEE_SUCCESS) {
-        return (void *) -1;
+            }
+
+            DMSG("准备读取 %zu 字节\n", bytes_to_read);
+            sys_read_args_t args = {
+                    .fd = fd,
+                    .buf = (char *) buf + total_bytes_read,
+                    .count = bytes_to_read,
+            };
+            long ret = 0;
+
+            TEE_Result res = TEE_forward_syscall(SYS_read, &args, sizeof(args), &ret);
+            total_bytes_read += ret;
+            if (res != TEE_SUCCESS) {
+                return (void *) -1;
+            }
+            if (ret < bytes_to_read) {
+                DMSG("文件已到末尾\n");
+                break;
+            }
+        }
+
+        return buf;
     }
-    return (void *) vaddr;
 }
 
 static int  sys_munmap(void *start, size_t len) {
@@ -121,7 +164,7 @@ static int sys_openat(int dirfd, const char *pathname, int flags) {
     };
     long ret = 0;
     TEE_Result res = TEE_forward_syscall(SYS_openat, &args, sizeof(args), &ret);
-//    DMSG("sys_openat(%d, %s, %d) = %ld\n", dirfd, pathname, flags, ret);
+    DMSG("sys_openat(%d, %s, %d) = %ld\n", dirfd, pathname, flags, ret);
 
     if (res != TEE_SUCCESS) {
         return -1;
@@ -151,7 +194,7 @@ static ssize_t sys_read(int fd, void *buf, size_t count){
     };
     long ret = 0;
     TEE_Result res = TEE_forward_syscall(SYS_read, &args, sizeof(args), &ret);
-//    DMSG("sys_read(%d) = %ld\n", fd, ret);
+    DMSG("sys_read(%d) = %ld\n", fd, ret);
 
     if (res != TEE_SUCCESS) {
         return -1;
@@ -183,7 +226,7 @@ static ssize_t sys_write(int fd, void *buf, size_t count){
     };
     long ret = 0;
     TEE_Result res = TEE_forward_syscall(SYS_write, &args, sizeof(args), &ret);
-//    DMSG("sys_write(%d) = %ld\n", fd, ret);
+    DMSG("sys_write(%d) = %ld\n", fd, ret);
 
     if (res != TEE_SUCCESS) {
         return -1;
@@ -200,7 +243,7 @@ static ssize_t sys_pread(int fd, void *buf, size_t count,long ofs){
     };
     long ret = 0;
     TEE_Result res = TEE_forward_syscall(SYS_pread64, &args, sizeof(args), &ret);
-//    DMSG("sys_pread(%d) = %ld\n", fd, ret);
+    DMSG("sys_pread(%d) = %ld\n", fd, ret);
 
     if (res != TEE_SUCCESS) {
         return -1;
@@ -217,7 +260,7 @@ static ssize_t sys_pwrite(int fd, void *buf, size_t count,long ofs){
     };
     long ret = 0;
     TEE_Result res = TEE_forward_syscall(SYS_pwrite64, &args, sizeof(args), &ret);
-//    DMSG("sys_pwrite(%d) = %ld\n", fd, ret);
+    DMSG("sys_pwrite(%d) = %ld\n", fd, ret);
 
     if (res != TEE_SUCCESS) {
         return -1;
@@ -233,7 +276,7 @@ static int sys_access(const char *filename, int amode) {
     };
     long ret = 0;
     TEE_Result res = TEE_forward_syscall(SYS_faccessat, &args, sizeof(args), &ret);
-//    DMSG("access(%d, %s, %d) = %ld\n", amode, filename, ret);
+    DMSG("access(%d, %s, %d) = %ld\n", amode, filename, ret);
 
     if (res != TEE_SUCCESS) {
         return -1;
@@ -259,7 +302,7 @@ static int sys_lseek(int fd, long offset, int whence) {
 
 long syscall_hook_impl(long n, long a, long b, long c, long d, long e, long f) {
     long ret = 0;
-    DMSG("syscall_hook_impl(%ld, %ld, %ld, %ld, %ld, %ld, %ld)\n", n, a, b, c, d, e, f);
+//    DMSG("syscall_hook_impl(%ld, %ld, %ld, %ld, %ld, %ld, %ld)\n", n, a, b, c, d, e, f);
     switch (n) {
         case SYS_set_tid_address:
         case SYS_ioctl:

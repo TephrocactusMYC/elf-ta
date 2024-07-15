@@ -5,16 +5,16 @@
     <option name="openedFilesInfos">
       <list>
         <OpenedFileInfo>
-          <option name="caretOffset" value="2079" />
+          <option name="caretOffset" value="2978" />
           <option name="fileUrl" value="file://$PROJECT_DIR$/host/main.c" />
         </OpenedFileInfo>
         <OpenedFileInfo>
-          <option name="caretOffset" value="307" />
-          <option name="fileUrl" value="file://$PROJECT_DIR$/ta/syscall.c" />
+          <option name="caretOffset" value="1906" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/ta/user_ta_header_defines.h" />
         </OpenedFileInfo>
         <OpenedFileInfo>
-          <option name="caretOffset" value="1905" />
-          <option name="fileUrl" value="file://$PROJECT_DIR$/ta/user_ta_header_defines.h" />
+          <option name="caretOffset" value="1667" />
+          <option name="fileUrl" value="file://$PROJECT_DIR$/ta/syscall.c" />
         </OpenedFileInfo>
       </list>
     </option>
